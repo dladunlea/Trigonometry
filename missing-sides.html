@@ -1,0 +1,857 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Finding Missing Sides</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one guided card at a time with a part-by-part progress strip on top, CP2U7 trig practice. */
+:root{
+  --bg:#e8eeec; --paper:#f8fbfa; --ink:#1b2b2a; --muted:#566a68; --rule:#cbd8d5;
+  --accent:#1f6b66; --accent-soft:#d6e9e6; --brass:#a87a1f; --brass-soft:#f4e7c6;
+  --good:#2e7d4f; --good-soft:#dcefe3; --bad:#b33a3a; --bad-soft:#f6dede;
+  --f-display:"Young Serif", Georgia, serif;
+  --f-body:"Atkinson Hyperlegible", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121a19; --paper:#1a2524; --ink:#e2ecea; --muted:#97aba8; --rule:#2c3b39;
+  --accent:#6cc4bb; --accent-soft:#1f3a37; --brass:#e0b45a; --brass-soft:#3a2f17;
+  --good:#6fcf97; --good-soft:#18352a; --bad:#ef7b7b; --bad-soft:#3d1f1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121a19; --paper:#1a2524; --ink:#e2ecea; --muted:#97aba8; --rule:#2c3b39;
+  --accent:#6cc4bb; --accent-soft:#1f3a37; --brass:#e0b45a; --brass-soft:#3a2f17;
+  --good:#6fcf97; --good-soft:#18352a; --bad:#ef7b7b; --bad-soft:#3d1f1f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;margin:0;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.top{display:flex;flex-wrap:wrap;gap:14px 28px;align-items:flex-end;justify-content:space-between}
+.top h1{font-family:var(--f-display);font-weight:400;font-size:clamp(1.5rem,4vw,2.1rem);margin:0;line-height:1.1}
+.top .sub{margin:4px 0 0;color:var(--muted);font-size:.9rem}
+.progress{list-style:none;margin:0;padding:0;display:grid;gap:6px;flex:1 1 360px;max-width:520px}
+.progress button{width:100%;text-align:left;background:none;border:0;padding:4px 0;font:inherit;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.progress button:disabled{cursor:default;opacity:.55}
+.progress button:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.progress .bar{display:block;height:6px;border-radius:3px;background:var(--rule);overflow:hidden}
+.progress .bar i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.progress .lab{font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.progress .cur .lab{color:var(--ink)}
+.progress .cur .bar{outline:2px solid var(--brass);outline-offset:1px}
+.panel{background:var(--paper);border:1px solid var(--rule);border-radius:10px}
+.card{padding:clamp(18px,3.4vw,34px);display:flex;flex-direction:column;gap:18px;min-width:0}
+.eyebrow{margin:0;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.card h2{font-family:var(--f-display);font-weight:400;font-size:clamp(1.3rem,3vw,1.75rem);line-height:1.3;margin:0;text-wrap:balance}
+.card p{margin:0;max-width:65ch}
+.math{font-family:var(--f-mono);font-weight:600;white-space:nowrap}
+.card h2 .math{font-weight:600;font-size:.95em}
+.muted{color:var(--muted)}
+.tip{background:var(--brass-soft);border-radius:8px;padding:10px 14px;font-size:.95rem;max-width:65ch}
+.rule{background:var(--accent-soft);border-radius:8px;padding:12px 16px;font-family:var(--f-mono);font-weight:600;font-size:1.05rem;overflow-x:auto}
+.worked{margin:0;padding-left:1.3rem;display:grid;gap:8px}
+.worked li::marker{color:var(--accent);font-weight:700}
+.steps{display:grid;gap:12px;grid-template-columns:minmax(0,1fr)}
+.step{display:grid;grid-template-columns:2rem minmax(0,1fr);gap:4px 12px;align-items:start;padding:12px;border-radius:10px;border:1px solid var(--rule)}
+.step.active{border-color:var(--accent);background:var(--bg)}
+.step .n{width:2rem;height:2rem;border-radius:50%;display:grid;place-items:center;font:700 .9rem var(--f-mono);background:var(--rule);color:var(--ink)}
+.step.active .n{background:var(--accent);color:var(--paper)}
+.step.done .n{background:var(--good);color:var(--paper)}
+.step-body{display:flex;flex-direction:column;gap:10px;min-width:0}
+.step.coll{padding:0;display:block}
+.qp{font-size:1.05rem;line-height:1.55;max-width:65ch}
+.qp .math{font-weight:500}
+.fns{display:grid;gap:4px;margin:8px 0;padding:8px 12px;border-left:3px solid var(--accent);background:var(--bg);border-radius:6px}
+.fns{overflow-x:auto}.fns div{font-family:var(--f-mono);font-size:1rem;white-space:nowrap}
+@media (max-width:520px){.fns{padding:6px 8px}.fns div{font-size:.86rem}.fns .fl{min-width:3.4em!important;font-size:.8rem!important}}
+.fns .fl{font-family:var(--f-body);color:var(--muted);font-size:.9rem;display:inline-block;min-width:4.2em}
+.bew{display:grid;gap:10px;border:1px solid var(--rule);border-radius:10px;padding:12px;background:var(--bg)}
+.bew-sl{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;font-weight:700}
+.bew-sl input{flex:1 1 200px;accent-color:var(--brass)}
+.duo{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:600px){.duo{gap:6px}.bew{padding:8px}.duo figcaption,.bew-c{font-size:.8rem}.bew-v{font-size:.72rem}}
+.duo figure{margin:0;display:grid;gap:6px;min-width:0}
+.duo figcaption{font-size:.9rem}
+.duo .plot svg{touch-action:none}
+.bew-v{font:600 .85rem var(--f-mono);margin:0}
+.bew-c{margin:0;padding:6px 10px;border-radius:8px;font-weight:700;font-size:.95rem}
+.bew-c.gain{background:var(--good-soft);color:var(--good)}
+.bew-c.loss{background:var(--bad-soft);color:var(--bad)}
+.bew-c.even{background:var(--brass-soft);color:var(--ink)}
+.step.coll .cfb{margin:0 12px 10px}
+.stog{display:flex;align-items:center;gap:12px;width:100%;background:none;border:0;padding:8px 12px;font:inherit;font-size:.92rem;color:var(--muted);text-align:left;cursor:pointer;border-radius:10px}
+.stog:hover{background:var(--bg)}
+.stog:focus-visible,.shide:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.stog .n{flex:none;width:1.6rem;height:1.6rem;font-size:.8rem}
+.stog .st{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stog .arr,.shide{flex:none;font-size:1.1rem;color:var(--accent)}
+.shide{align-self:flex-end;margin:-6px -4px -14px 0;background:none;border:0;cursor:pointer;padding:2px 6px;line-height:1;border-radius:6px;order:-1}
+.step-text small{display:block;color:var(--muted);font-size:.85rem}
+.tpl{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:var(--f-mono);font-weight:600;font-size:1.1rem}
+.in{font-family:var(--f-mono);font-size:1.1rem;height:44px;width:4.6rem;padding:0 6px;border:2px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);text-align:center}
+.in.wide{width:7rem}
+.tpl.tight{gap:1px;font-size:.95rem}.tpl.tight .in{width:2.25rem;padding:0 1px;font-size:1rem}.tpl.tight.mid .in{width:3.1rem}.tpl.tight .in.wide{width:4.3rem}
+@media (max-width:520px){.tpl .brk{flex-basis:100%;height:0}}
+.tpl .in.sub{width:3rem;height:34px;font-size:.95rem;position:relative;top:14px;margin-left:-2px}
+.tpl:has(.in.sub){padding-bottom:22px}
+.in:focus{outline:none;border-color:var(--accent);background:var(--accent-soft)}
+.in:disabled{border-color:var(--good);opacity:1;color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.choices{display:grid;gap:8px}
+.choices.two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ch{font:inherit;text-align:left;padding:10px 14px;border-radius:8px;border:2px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer}
+.ch:hover:not(:disabled){border-color:var(--accent)}
+.ch.on{border-color:var(--good);background:var(--good-soft)}
+.ch.no{border-color:var(--bad);background:var(--bad-soft)}
+.ch:disabled{cursor:default}
+.ch:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+textarea.explain{width:100%;min-height:110px;font:inherit;padding:10px 12px;border:2px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink);resize:vertical}
+textarea.explain:focus{outline:none;border-color:var(--accent)}
+textarea.explain:disabled{border-color:var(--good);opacity:1}
+.sample{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:8px;padding:10px 14px;font-size:.95rem}
+.sample b{display:block;font-size:.75rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.btn{font:700 .95rem var(--f-body);padding:11px 18px;border-radius:8px;border:2px solid var(--accent);background:var(--accent);color:var(--paper);cursor:pointer;line-height:1.2}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;color:var(--accent)}
+.btn.small{padding:7px 12px;font-size:.85rem}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.btn.pulse{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 var(--brass)}50%{box-shadow:0 0 0 6px transparent}}
+.fb{margin:0;padding:10px 14px;border-radius:8px;font-size:.98rem;max-width:65ch}
+.fb:empty{display:none}
+.fb.good{background:var(--good-soft);border-left:4px solid var(--good)}
+.fb.bad{background:var(--bad-soft);border-left:4px solid var(--bad)}
+.fb.show{background:var(--brass-soft);border-left:4px solid var(--brass)}
+.final{font-family:var(--f-body);font-weight:600;font-size:1rem;background:var(--good-soft);border-radius:8px;padding:10px 14px;overflow-x:auto}
+.nav{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule);padding-top:16px}
+.partdone{display:flex;flex-direction:column;gap:2px;background:var(--brass-soft);border:2px solid var(--brass);border-radius:10px;padding:12px 16px}
+.partdone strong{font-family:var(--f-display);font-weight:400;font-size:1.3rem}
+.plan{margin:0;padding:0;list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.plan li{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:var(--bg);display:flex;flex-direction:column;gap:2px}
+.plan .k{font:600 .75rem var(--f-mono);color:var(--muted)}
+.fields{display:flex;flex-wrap:wrap;gap:14px}
+.fields label{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:.9rem;flex:1 1 220px;max-width:340px}
+.fields input{font:inherit;font-weight:400;height:44px;padding:0 12px;border:2px solid var(--rule);border-radius:8px;background:var(--paper);color:var(--ink)}
+.fields input:focus{outline:none;border-color:var(--accent)}
+.rtitle{margin:0;font-family:var(--f-display);font-size:clamp(1.2rem,3vw,1.5rem);color:var(--accent)}
+.rname{font-size:clamp(1.8rem,5vw,2.4rem)!important}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{border:1px solid var(--rule);border-radius:8px;padding:10px 12px;background:var(--bg)}
+.stat .v{font:600 1.5rem var(--f-mono);font-variant-numeric:tabular-nums;display:block;line-height:1.2}
+.stat .l{font-size:.8rem;color:var(--muted)}
+.rparts{display:grid;gap:12px}
+.rpart{border:1px solid var(--rule);border-radius:8px;padding:12px 14px;background:var(--bg)}
+.rpart h3{margin:0 0 8px;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.rpart ul{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.rpart li{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.92rem}
+.rpart li span:first-child{min-width:0}
+.rpart blockquote{margin:2px 0 6px;padding:6px 10px;border-left:3px solid var(--accent);background:var(--paper);font-size:.9rem;border-radius:4px}
+.pill{flex:none;font-size:.78rem;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--rule);color:var(--ink);white-space:nowrap}
+.pill.first{background:var(--good-soft);color:var(--good)}
+.pill.hint{background:var(--brass-soft);color:var(--ink)}
+.pill.shown{background:var(--bad-soft);color:var(--bad)}
+.boxwrap{padding:2px}
+.box{display:grid;grid-template-columns:auto repeat(2,minmax(0,1fr));gap:0;width:min(100%,340px)}
+.box .lab .in{width:3.6rem}
+.box .lab{padding:4px}
+.box .lab{display:flex;align-items:center;justify-content:center;padding:6px;font-family:var(--f-mono);font-weight:600;font-size:1.1rem;color:var(--accent)}
+.box .lab .in{border-color:var(--accent)}
+.box .cell{display:flex;align-items:center;justify-content:center;height:clamp(54px,15vw,72px);min-width:0;border:2.5px solid var(--ink);margin:-1.25px;background:var(--paper);font-family:var(--f-mono);font-weight:600;font-size:1.15rem}
+.box .cell .in{width:100%;min-width:0;height:100%;border:0;border-radius:0;background:transparent;font-size:1.05rem;padding:0 2px}
+.box .cell .in:focus{background:var(--accent-soft)}
+.box .cell.given{background:var(--accent-soft)}
+.box .no,.box .cell.no{background:var(--bad-soft)!important}
+.box .lab .in.no{border-color:var(--bad);background:var(--bad-soft)}
+.box .cell.mid{background:var(--brass-soft)}
+.keys{display:flex;flex-wrap:wrap;gap:6px}
+.keys button{font:600 1rem var(--f-mono);min-width:44px;height:38px;border-radius:8px;border:2px solid var(--rule);background:var(--paper);color:var(--ink);cursor:pointer}
+.keys button:hover{border-color:var(--accent)}
+.plotwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px;align-items:start}
+@media (max-width:640px){.plotwrap{grid-template-columns:minmax(0,1fr)}}
+.prow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-family:var(--f-mono);font-weight:600;padding:6px 8px;border-radius:8px;border:2px solid transparent}
+.prow .pl{font-family:var(--f-body);font-weight:700;font-size:.85rem;flex-basis:100%;display:flex;align-items:center;gap:6px}
+.prow .dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+.prow.sel{border-color:var(--accent);background:var(--accent-soft)}
+.prow.no{border-color:var(--bad);background:var(--bad-soft)}
+.prow .in{width:3.6rem;height:40px}
+.plot svg{width:100%;height:auto;display:block;background:var(--paper);border:1px solid var(--rule);border-radius:8px;touch-action:manipulation;cursor:crosshair}
+.plot .gl{stroke:var(--rule);stroke-width:1}
+.plot .ax{stroke:var(--ink);stroke-width:1.6}
+.plot text{fill:var(--muted);font:11px var(--f-mono)}
+.plot .curve{fill:none;stroke:var(--accent);stroke-width:2.5}
+.srt{display:inline-flex;align-items:flex-start;white-space:nowrap}
+.srt>i{font-style:normal;font-size:1.15em;line-height:1;margin-right:-1px;transform:translateY(-.06em)}
+.srt>span{border-top:1.6px solid currentColor;padding:1px 2px 0;line-height:1.2}
+.sfr{display:inline-flex;flex-direction:column;align-items:center;vertical-align:middle;line-height:1.15;margin:0 2px;text-align:center}
+.sfr>span{padding:0 3px}
+.sfr>span:first-child{border-bottom:1.5px solid currentColor}
+.fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:30}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:8px;font-size:.9rem;max-width:calc(100% - 32px);z-index:20}
+@media (max-width:520px){.stats{grid-template-columns:minmax(0,1fr)}.step{grid-template-columns:minmax(0,1fr)}.step .n{display:none}.stog .n{display:grid}}
+@media (prefers-reduced-motion:reduce){.btn.pulse{animation:none}.progress .bar i{transition:none}}
+.fig{max-width:420px;width:100%}
+.fig svg,.ch svg{width:100%;height:auto;display:block}
+.fig svg{background:var(--paper);border:1px solid var(--rule);border-radius:8px}
+.tri .edge{stroke:var(--ink);stroke-width:2.2;fill:none;stroke-linejoin:round}
+.tri .fillt{fill:var(--accent-soft);stroke:none}
+.tri text{font:600 15px var(--f-mono);fill:var(--ink)}
+.tri text.given{fill:var(--accent)}
+.tri text.want{fill:var(--brass);font-weight:700}
+.tri text.vn{font:700 14px var(--f-body);fill:var(--muted)}
+.tri text.word{font:600 13px var(--f-body);fill:var(--muted)}
+.tri .arc{stroke:var(--brass);stroke-width:2;fill:none}
+.tri .arc.ref{stroke-dasharray:4 3}
+.tri .ra{stroke:var(--ink);stroke-width:1.5;fill:none}
+.tri .gl{stroke:var(--rule);stroke-width:1}
+.tri .ax{stroke:var(--ink);stroke-width:1.6}
+.tri .term{stroke:var(--accent);stroke-width:2.6}
+.tri .drop{stroke:var(--brass);stroke-width:2;stroke-dasharray:5 4}
+.tri .dot{fill:var(--accent);stroke:var(--paper);stroke-width:2}
+.tri text.tick{font:11px var(--f-mono);fill:var(--muted)}
+.choices.pics{grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr))}
+.ch svg{max-width:260px;margin:0 auto}
+.back{font-size:.85rem;color:var(--accent);text-decoration:none}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div><a class="back" href="index.html">← All sections</a><h1 id="appTitle"></h1><p class="sub" id="appSub"></p></div>
+    <ol class="progress" id="progress" aria-label="Progress"></ol>
+  </header>
+  <main class="card panel" id="card" aria-live="polite"></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ======================= Shared engine ======================= */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* number formatting with a real minus sign */
+const N=n=>{const v=Math.round(n*1e6)/1e6;return v<0?'−'+Math.abs(v):String(v)};
+/* signed term: T(6,'x') -> "+ 6x", T(-1,'x') -> "− x", T(9,'') -> "+ 9" */
+const T=(c,v='')=>{if(c===0)return '';const a=Math.abs(c),co=(a===1&&v)?'':String(Math.round(a*1e6)/1e6);return (c<0?'− ':'+ ')+co+v};
+/* leading term without a plus sign */
+const L=(c,v='')=>{const a=Math.abs(c),co=(a===1&&v)?'':String(a);return (c<0?'−':'')+co+v};
+const M=s=>`<span class="math">${s}</span>`;
+/* stacked fraction */
+/* square root whose bar covers the whole radicand */
+const SQ=x=>`<span class="srt"><i>√</i><span>${x}</span></span>`;
+const SF=(top,bot)=>`<span class="sfr"><span>${top}</span><span>${bot}</span></span>`;
+/* terms like x², −6x, 9 for the box (area model) */
+function parseTerm(s){
+  s=String(s).trim().replace(/[−–]/g,'-').replace(/\s+/g,'').replace(/\^2|²/g,'2').replace(/^\+/,'').toLowerCase();
+  const m=s.match(/^(-?)(\d*\.?\d*)(x2?)?$/); if(!m||(!m[2]&&!m[3])) return null;
+  const c=(m[1]?-1:1)*(m[2]?Number(m[2]):1); return {c,d:m[3]?(m[3]==='x2'?2:1):0};
+}
+function fmtTerm(c,d){if(c===0)return '0';const a=Math.abs(c),co=(a===1&&d)?'':N(a);return (c<0?'−':'')+co+(d===2?'x²':d===1?'x':'')}
+const tEq=(a,b)=>a&&b&&(near(a.c,b.c)&&(a.c===0||a.d===b.d));
+/* p1, p2 = the two middle boxes (numbers), c = the last term */
+function combineStep({pre,p1,p2,c,text,ok}){
+  const b=p1+p2, two=`${fmtTerm(p1,1)} + ${p2<0?'('+fmtTerm(p2,1)+')':fmtTerm(p2,1)}`;
+  return {text:text||'Combine the two highlighted boxes and write the answer.',
+    small:'Type the middle term with its x, like 5x or −4x.',
+    tpl:`${pre} = x² + [] + []`, raw:true, ans:[b,c], ansText:[fmtTerm(b,1),N(c)],
+    show:`The middle boxes add to ${two} = ${fmtTerm(b,1)}, and the last term is the bottom-right box, ${N(c)}.`,
+    check:v=>{
+      const tm=parseTerm(v[0]), tc=parseTerm(v[1]);
+      if(!tm) return {hint:`“${esc(v[0])}” isn’t a term I can read. Type the middle term like 5x or −4x.`};
+      if(!tc) return {hint:`“${esc(v[1])}” isn’t a number I can read. Type the last term like 12 or −21.`};
+      if(tm.d===0&&tc.d===1&&near(tm.c,c)&&near(tc.c,b)) return {hint:'Those are in the wrong order. The x term goes in the middle and the plain number goes last.'};
+      if(tm.d===0) return {hint:near(tm.c,b)?`Include the x. The middle term is an x term: write ${fmtTerm(tm.c,1)}, not just ${N(tm.c)}.`:`The middle term is an x term. Add the two highlighted boxes: ${two}.`};
+      if(tm.d===2) return {hint:'The x² is already written for you. The middle term is the x term.'};
+      if(!near(tm.c,b)){
+        if(near(tm.c,c)) return {hint:'The middle term comes from adding the two highlighted boxes, not from the bottom-right box.'};
+        if(near(tm.c,p1)||near(tm.c,p2)) return {hint:`That’s only one of the middle boxes. Add both: ${two}.`};
+        if(near(tm.c,-b)) return {hint:`Check the sign. ${two} = ${fmtTerm(b,1)}.`};
+        return {hint:`Add the two highlighted boxes: ${two}.`};
+      }
+      if(tc.d!==0) return {hint:'The last term is just a number, with no x.'};
+      if(!near(tc.c,c)){
+        if(near(tc.c,-c)) return {hint:`Check the sign of the last term. It’s the bottom-right box: (${N(p1)})(${N(p2)}) = ?`};
+        if(near(tc.c,b)) return {hint:'The last term comes from the bottom-right box, not from adding.'};
+        return {hint:'The last term is the bottom-right box of your table.'};
+      }
+      return {ok:true,msg:ok||'That’s the full expansion.'};
+    }};
+}
+function parseNum(s){
+  s=String(s).trim().replace(/[−–]/g,'-').replace(/\s+/g,'').replace(/[$,]/g,'').replace(/^\+/,'').replace(/(°|degrees?|deg|feet|foot|ft|yards?|yd|meters?|cm|m|inches|in|units?)\.?$/i,'').replace(/^[a-z]=/i,'');
+  if(s==='') return NaN;
+  if(/^-?\d+(\.\d+)?\/-?\d+(\.\d+)?$/.test(s)){const [a,b]=s.split('/').map(Number);return b===0?NaN:a/b}
+  if(/^-?(\d+\.?\d*|\.\d+)$/.test(s)) return Number(s);
+  return NaN;
+}
+const near=(a,b,tol=1e-6)=>Math.abs(a-b)<=tol;
+function rng(seed){let a=seed>>>0;return ()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function R(seed){const r=rng(seed);return {f:r,int:(a,b)=>a+Math.floor(r()*(b-a+1)),pick:arr=>arr[Math.floor(r()*arr.length)],
+  deal:(arr,n)=>{const c=arr.slice();for(let i=c.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[c[i],c[j]]=[c[j],c[i]]}return c.slice(0,n)}}}
+
+/* ===== CP2U7 shared trig helpers ===== */
+const DG=Math.PI/180;
+const F={sin:a=>Math.sin(a*DG),cos:a=>Math.cos(a*DG),tan:a=>Math.tan(a*DG)};
+const FRAD={sin:Math.sin,cos:Math.cos,tan:Math.tan};
+const INV={sin:x=>Math.asin(x)/DG,cos:x=>Math.acos(x)/DG,tan:x=>Math.atan(x)/DG};
+const INVRAD={sin:Math.asin,cos:Math.acos,tan:Math.atan};
+const r0=x=>Math.round(x), r1=x=>Math.round(x*10)/10, r2=x=>Math.round(x*100)/100;
+const SIDE={opp:'opposite',adj:'adjacent',hyp:'hypotenuse'};
+const RATIO={sin:['opp','hyp'],cos:['adj','hyp'],tan:['opp','adj']};
+const FNAME={sin:'sin',cos:'cos',tan:'tan'};
+const SOH={sin:'SOH: sine = opposite ÷ hypotenuse',cos:'CAH: cosine = adjacent ÷ hypotenuse',tan:'TOA: tangent = opposite ÷ adjacent'};
+function fnFor(a,b){const s=[a,b].sort().join();return s==='hyp,opp'?'sin':s==='adj,hyp'?'cos':'tan'}
+const TOLS=x=>Math.max(0.11,Math.abs(x)*0.006);   /* nearest tenth, allows rounding along the way */
+const TOLA=0.6;                                    /* nearest degree */
+
+/* numeric step with a list of [wrongValue, hint] traps */
+function numStep(o){
+  const tol=o.tol??TOLS(o.ans);
+  return {text:o.text,small:o.small,sum:o.sum,tpl:o.tpl,ans:[o.ans],ansText:[o.ansText??N(r1(o.ans))],show:o.show,quiet:o.quiet,
+    check:n=>{const v=n[0];
+      if(near(v,o.ans,tol)) return {ok:true,msg:o.ok};
+      for(const [w,m] of (o.traps||[])) if(isFinite(w)&&near(v,w,Math.max(tol,Math.abs(w)*0.006))) return {hint:m};
+      return {hint:typeof o.hint==='function'?o.hint(v):(o.hint||'Not quite. Check your calculator steps and try again.')}}};
+}
+const DEFS={opp:'The opposite side is across from the angle. It doesn’t touch the angle.',
+  adj:'The adjacent side touches the angle, and it is not the hypotenuse.',
+  hyp:'The hypotenuse is across from the right angle. It’s always the longest side.'};
+function roleChoice(text,role,small,sum){
+  return {type:'choice',noShuffle:true,text,small,sum,correct:['opp','adj','hyp'].indexOf(role),
+    options:['opp','adj','hyp'].map(k=>({t:k==='opp'?'Opposite':k==='adj'?'Adjacent':'Hypotenuse',why:(k===role?'Yes. ':'Not this one. ')+DEFS[k]}))};
+}
+function ratioChoice(a,b,text,sum){const fn=fnFor(a,b);
+  return {type:'choice',noShuffle:true,sum,text:text||`Which ratio uses the ${SIDE[a]} and the ${SIDE[b]}?`,correct:['sin','cos','tan'].indexOf(fn),
+    options:['sin','cos','tan'].map(k=>({t:k==='sin'?'Sine (SOH)':k==='cos'?'Cosine (CAH)':'Tangent (TOA)',why:(k===fn?'Yes. ':'Not this one. ')+SOH[k]+'.'}))};
+}
+/* multiple choice where options are [html, why] and the first one is correct */
+function mc(text,opts,extra={}){return {type:'choice',text,correct:0,options:opts.map(([t,why])=>({t,why})),...extra}}
+const FR=(a,b)=>SF(a,b);
+
+/* ---------- right triangle figure ----------
+   R = right-angle vertex (bottom), P = other bottom vertex, Q = top vertex (above R).
+   ang = angle at P in degrees (sets the shape). flip mirrors left/right.
+   lab = {base, vert, hyp} side labels, cls = {base:'given'|'want'} colors.
+   marks = [{at:'P'|'Q', lab:'30°', cls}] angle arcs. names = {R,P,Q} vertex letters. */
+function triSVG(o){
+  const W=o.w||340,H=o.h||230,pad=o.pad||40;
+  const a=Math.min(66,Math.max(24,o.ang))*DG;
+  let bw=W-2*pad-20, bh=bw*Math.tan(a);
+  if(bh>H-2*pad){bh=H-2*pad;bw=bh/Math.tan(a)}
+  const x0=(W-bw)/2, yt=(H-bh)/2, yb=yt+bh, fx=x=>o.flip?W-x:x;
+  const V={R:[fx(x0),yb],P:[fx(x0+bw),yb],Q:[fx(x0),yt]};
+  const cen=[(V.R[0]+V.P[0]+V.Q[0])/3,(V.R[1]+V.P[1]+V.Q[1])/3];
+  const sub=(p,q)=>[p[0]-q[0],p[1]-q[1]], un=v=>{const l=Math.hypot(v[0],v[1])||1;return [v[0]/l,v[1]/l]}, f=n=>n.toFixed(1);
+  const pts=['R','P','Q'].map(k=>V[k].map(f).join(',')).join(' ');
+  let g=`<polygon class="fillt" points="${pts}"/><polygon class="edge" points="${pts}"/>`;
+  const u=un(sub(V.P,V.R)), v=un(sub(V.Q,V.R)), q=13;
+  g+=`<path class="ra" d="M${f(V.R[0]+u[0]*q)} ${f(V.R[1]+u[1]*q)} L${f(V.R[0]+u[0]*q+v[0]*q)} ${f(V.R[1]+u[1]*q+v[1]*q)} L${f(V.R[0]+v[0]*q)} ${f(V.R[1]+v[1]*q)}"/>`;
+  for(const m of (o.marks||[])){
+    const p=V[m.at], nb=m.at==='P'?['R','Q']:['R','P'];
+    const ua=un(sub(V[nb[0]],p)), ub=un(sub(V[nb[1]],p)), rad=26;
+    const s=[p[0]+ua[0]*rad,p[1]+ua[1]*rad], e=[p[0]+ub[0]*rad,p[1]+ub[1]*rad], cr=ua[0]*ub[1]-ua[1]*ub[0];
+    g+=`<path class="arc" d="M${f(s[0])} ${f(s[1])} A${rad} ${rad} 0 0 ${cr>0?1:0} ${f(e[0])} ${f(e[1])}"/>`;
+    const half=Math.acos(Math.max(-1,Math.min(1,ua[0]*ub[0]+ua[1]*ub[1])))/2, bis=un([ua[0]+ub[0],ua[1]+ub[1]]);
+    const lr=Math.max(rad+18,13/Math.sin(half)+6);
+    g+=`<text x="${f(p[0]+bis[0]*lr)}" y="${f(p[1]+bis[1]*lr)}" class="${m.cls||'given'}" text-anchor="middle" dominant-baseline="middle">${m.lab}</text>`;
+  }
+  const sides={base:['R','P'],vert:['R','Q'],hyp:['P','Q']};
+  for(const k in sides){ const t=o.lab&&o.lab[k]; if(t==null||t==='') continue;
+    const [A,B]=sides[k].map(z=>V[z]), mid=[(A[0]+B[0])/2,(A[1]+B[1])/2], d=un(sub(B,A));
+    let n=[-d[1],d[0]]; const tc=sub(mid,cen); if(n[0]*tc[0]+n[1]*tc[1]<0) n=[-n[0],-n[1]];
+    const off=12, x=mid[0]+n[0]*off, y=mid[1]+n[1]*off+(Math.abs(n[1])>0.5?(n[1]>0?6:-2):0);
+    const anc=n[0]>0.35?'start':n[0]<-0.35?'end':'middle';
+    g+=`<text x="${f(x)}" y="${f(y)}" class="${(o.cls&&o.cls[k])||'given'}" text-anchor="${anc}" dominant-baseline="middle">${t}</text>`;
+  }
+  if(o.names) for(const k of ['R','P','Q']){const d=un(sub(V[k],cen)); g+=`<text class="vn" x="${f(V[k][0]+d[0]*16)}" y="${f(V[k][1]+d[1]*16)}" text-anchor="middle" dominant-baseline="middle">${o.names[k]}</text>`}
+  if(o.extra) g+=o.extra(V,f);
+  return `<svg class="tri" viewBox="0 0 ${W} ${H}" role="img" aria-label="${o.aria||'Right triangle'}">${g}</svg>`;
+}
+const FIG=svg=>`<div class="fig">${svg}</div>`;
+
+/* ---------- point on the coordinate plane with its reference triangle ---------- */
+function ptSVG(x,y,o={}){
+  const Lm=Math.max(6,Math.abs(x)+1,Math.abs(y)+1), W=320, c=W/2, s=(W/2-20)/Lm;
+  const X=v=>c+v*s, Y=v=>c-v*s, f=n=>n.toFixed(1);
+  let g='';
+  for(let i=-Lm;i<=Lm;i++) g+=`<line class="gl" x1="${f(X(i))}" y1="${f(Y(-Lm))}" x2="${f(X(i))}" y2="${f(Y(Lm))}"/><line class="gl" x1="${f(X(-Lm))}" y1="${f(Y(i))}" x2="${f(X(Lm))}" y2="${f(Y(i))}"/>`;
+  g+=`<line class="ax" x1="${f(X(-Lm))}" y1="${c}" x2="${f(X(Lm))}" y2="${c}"/><line class="ax" x1="${c}" y1="${f(Y(-Lm))}" x2="${c}" y2="${f(Y(Lm))}"/>`;
+  g+=`<text class="tick" x="${f(X(Lm)-4)}" y="${c-6}" text-anchor="end">x</text><text class="tick" x="${c+6}" y="${f(Y(Lm)+10)}">y</text>`;
+  if(o.tri) g+=`<polygon class="fillt" points="${c},${c} ${f(X(x))},${c} ${f(X(x))},${f(Y(y))}"/><line class="drop" x1="${f(X(x))}" y1="${c}" x2="${f(X(x))}" y2="${f(Y(y))}"/>`;
+  g+=`<line class="term" x1="${c}" y1="${c}" x2="${f(X(x))}" y2="${f(Y(y))}"/>`;
+  let th=Math.atan2(y,x)/DG; if(th<0) th+=360;
+  const ar=18, ex=c+ar*Math.cos(th*DG), ey=c-ar*Math.sin(th*DG);
+  g+=`<path class="arc" d="M${c+ar} ${c} A${ar} ${ar} 0 ${th>180?1:0} 0 ${f(ex)} ${f(ey)}"/>`;
+  const lt=th/2, lx=c+(ar+11)*Math.cos(lt*DG), ly=c-(ar+11)*Math.sin(lt*DG);
+  g+=`<text class="want" x="${f(lx)}" y="${f(ly)}" text-anchor="middle" dominant-baseline="middle" style="font-size:13px">θ</text>`;
+  if(o.ref&&!(x>0&&y>0)){
+    const base=x<0?180:360, rr=Math.min(40,Math.hypot(x,y)*s*0.45);
+    const a1=base===180?180:0, sx=c+rr*Math.cos(a1*DG), sy=c;
+    const tx=c+rr*Math.cos(th*DG), ty=c-rr*Math.sin(th*DG);
+    const ccw=(base===180)?(th<180):(th>180); /* from axis toward the terminal side */
+    g+=`<path class="arc ref" d="M${f(sx)} ${f(sy)} A${rr} ${rr} 0 0 ${x<0?(y>0?1:0):1} ${f(tx)} ${f(ty)}"/>`;
+  }
+  if(o.tri){
+    const bx=X(x/2), by=c+(y>0?15:-9);
+    g+=`<text class="given" x="${f(bx)}" y="${f(by)}" text-anchor="middle" dominant-baseline="middle" style="font-size:13px">x = ${N(x)}</text>`;
+    g+=`<text class="given" x="${f(X(x)+(x>0?7:-7))}" y="${f(Y(y/2))}" text-anchor="${x>0?'start':'end'}" dominant-baseline="middle" style="font-size:13px">y = ${N(y)}</text>`;
+    const mx=X(x/2), my=Y(y/2); let nx=-(Y(y)-c), ny=(X(x)-c); const l=Math.hypot(nx,ny); nx/=l; ny/=l;
+    const tx=X(x)-mx, ty=c-my; if(nx*tx+ny*ty>0){nx=-nx;ny=-ny}
+    g+=`<text class="want" x="${f(mx+nx*13)}" y="${f(my+ny*13)}" text-anchor="middle" dominant-baseline="middle" style="font-size:14px">r</text>`;
+  }
+  g+=`<circle class="dot" cx="${f(X(x))}" cy="${f(Y(y))}" r="6"/>`;
+  g+=`<text x="${f(X(x)+(x>0?4:-4))}" y="${f(Y(y)+(y>0?-12:20))}" text-anchor="${x>0?'end':'start'}" style="font-size:13px">(${N(x)}, ${N(y)})</text>`;
+  return `<svg class="tri" viewBox="0 0 ${W} ${W}" role="img" aria-label="Point (${N(x)}, ${N(y)}) on the coordinate plane">${g}</svg>`;
+}
+
+/* Section 2: Finding missing sides */
+const VARS=['x','y','m','n','k','w','a','b'];
+function mkSide(r,kind){
+  for(let g=0;g<400;g++){
+    const A=r.int(22,68), mark=r.pick(['P','Q']), flip=r.f()<.5;
+    const roles=mark==='P'?{base:'adj',vert:'opp',hyp:'hyp'}:{base:'opp',vert:'adj',hyp:'hyp'};
+    const fn=r.pick(['sin','cos','tan']), [nu,de]=RATIO[fn];
+    const top=kind==='top'?true:kind==='bottom'?false:r.f()<.5;
+    const want=top?nu:de, know=top?de:nu, k=r.int(4,30);
+    const val=top?k*F[fn](A):k/F[fn](A);
+    if(val<2||val>99) continue;
+    const v=r.pick(VARS), lab={}, cls={};
+    for(const s of ['base','vert','hyp']){if(roles[s]===want){lab[s]=v;cls[s]='want'} else if(roles[s]===know){lab[s]=String(k);cls[s]='given'}}
+    return {A,mark,flip,roles,fn,want,know,k,val,v,top,lab,cls,shape:mark==='P'?A:90-A};
+  }
+}
+const sideFig=p=>FIG(triSVG({ang:p.shape,flip:p.flip,lab:p.lab,cls:p.cls,marks:[{at:p.mark,lab:p.A+'°'}],aria:`Right triangle with a ${p.A} degree angle`}));
+function setupChoice(p){
+  const {fn,A,v,k,top}=p, num=top?v:k, den=top?k:v, other=r=>['sin','cos','tan'].filter(f=>f!==fn)[r];
+  return mc(`Set up the equation.`,[
+    [M(`${fn}(${A}°) = `)+SF(num,den),`Yes. ${SOH[fn]}, and ${num} is the ${SIDE[RATIO[fn][0]]}.`],
+    [M(`${fn}(${A}°) = `)+SF(den,num),`The fraction is upside down. ${SOH[fn]}.`],
+    [M(`${other(0)}(${A}°) = `)+SF(num,den),`${SOH[other(0)]}. That isn’t the pair of sides you have.`]],{sum:`${fn}(${A}°) = ${num}/${den}`});
+}
+function solveChoice(p){
+  const {fn,A,v,k,top}=p, mul=`${v} = ${k} · ${fn}(${A}°)`, div=`${v} = ${k} ÷ ${fn}(${A}°)`, bad=`${v} = ${fn}(${A}°) ÷ ${k}`;
+  return mc(`Get ${M(v)} by itself.`, top?[
+    [M(mul),`Yes. ${v} is on top, so multiply both sides by ${k}.`],
+    [M(div),`${v} is on top of the fraction, so multiply to undo the ÷ ${k}.`],
+    [M(bad),`To undo dividing by ${k}, multiply both sides by ${k}.`]]:[
+    [M(div),`Yes. ${v} is on the bottom. Multiply both sides by ${v}, then divide by ${fn}(${A}°). ${v} and ${fn}(${A}°) trade places.`],
+    [M(mul),`${v} is on the bottom of the fraction, so it isn’t a multiply. ${v} and ${fn}(${A}°) trade places.`],
+    [M(bad),`That one is flipped. ${v} and ${fn}(${A}°) trade places, and ${k} stays on top.`]],{sum:top?mul:div});
+}
+function calcStep(p){
+  const {fn,A,v,k,top,val}=p, op=top?'×':'÷', wrongOp=top?k/F[fn](A):k*F[fn](A);
+  const others=['sin','cos','tan'].filter(f=>f!==fn).flatMap(f=>[[k*F[f](A),`That uses ${f}. This problem uses ${fn}.`],[k/F[f](A),`That uses ${f}. This problem uses ${fn}.`]]);
+  return numStep({text:`Use your calculator. Round to the nearest tenth.`, small:`Type ${k} ${op} ${fn}(${A}) with your calculator in degree mode.`, tpl:`${v} = []`, ans:val, sum:`${v} ≈ ${N(r1(val))}`,
+    traps:[[top?k*FRAD[fn](A):k/FRAD[fn](A),'That looks like radians. Switch your calculator to degree mode.'],[wrongOp,top?`Multiply by ${fn}(${A}°), don’t divide.`:`Divide by ${fn}(${A}°), don’t multiply.`],...others],
+    hint:`${k} ${op} ${fn}(${A}°) = ?`, ok:`${v} ≈ ${N(r1(val))}`});
+}
+function sideProblem(p,full){
+  const steps=[
+    roleChoice(`Relative to the ${p.A}° angle, which side is ${M(p.v)}?`,p.want,'',`${p.v} is the ${SIDE[p.want]}`),
+    roleChoice(`Which side is ${M(p.k)}?`,p.know,'',`${p.k} is the ${SIDE[p.know]}`),
+    ratioChoice(p.want,p.know,null,`Use ${p.fn}`)];
+  if(full) steps.push(setupChoice(p),solveChoice(p),calcStep(p));
+  return {label:full?`Find ${M(p.v)} (${p.fn}, ${p.A}°)`:`Name the sides (${p.A}° angle)`,
+    prompt:full?`Find ${M(p.v)}. Round to the nearest tenth.`:`Name the sides of this triangle relative to the ${p.A}° angle, then pick the ratio you would use to find ${M(p.v)}.`,
+    figure:()=>sideFig(p), final:full?`${p.v} ≈ ${N(r1(p.val))}`:`${p.v} is the ${SIDE[p.want]}, ${p.k} is the ${SIDE[p.know]}, so use ${p.fn}.`, steps};
+}
+const APP={
+  key:'cp2u7-missing-sides-v1',
+  title:'Finding Missing Sides',
+  unit:'CP2U7 Trigonometry',
+  heading:'Use SOH CAH TOA to find a missing side',
+  intro:'Each part starts with a short lesson, then walks you through problems one step at a time. A wrong answer gets you a hint. The triangles change every time you practice. Have your calculator ready, in degree mode.',
+  parts:[
+  {
+    name:'Name the sides',
+    lesson:`<h2>Every side gets its name from the angle you’re using</h2>
+      ${FIG(triSVG({ang:35,lab:{base:'adjacent',vert:'opposite',hyp:'hypotenuse'},cls:{base:'given',vert:'given',hyp:'want'},marks:[{at:'P',lab:'θ'}],w:360}))}
+      <ol class="worked">
+        <li><b>Hypotenuse:</b> across from the right angle. It’s the longest side, and it never changes.</li>
+        <li><b>Opposite:</b> across from the angle θ. It doesn’t touch θ.</li>
+        <li><b>Adjacent:</b> touches θ, and it isn’t the hypotenuse.</li>
+      </ol>
+      <div class="rule">SOH: sin θ = opposite ÷ hypotenuse<br>CAH: cos θ = adjacent ÷ hypotenuse<br>TOA: tan θ = opposite ÷ adjacent</div>
+      <p class="tip">If the angle moves to the other corner, opposite and adjacent switch. Always start by finding the angle.</p>`,
+    make(r){return [mkSide(r,'any'),mkSide(r,'any'),mkSide(r,'any')].map(p=>sideProblem(p,false))}
+  },
+  {
+    name:'Unknown on top',
+    lesson:`<h2>When the unknown is on top, multiply</h2>
+      ${FIG(triSVG({ang:33,lab:{vert:'x',hyp:'27'},cls:{vert:'want',hyp:'given'},marks:[{at:'P',lab:'33°'}]}))}
+      <ol class="worked">
+        <li><b>Name the sides.</b> From 33°, x is opposite and 27 is the hypotenuse.</li>
+        <li><b>Pick the ratio.</b> Opposite and hypotenuse → SOH → sine.</li>
+        <li><b>Set it up.</b> ${M('sin(33°) = x / 27')}</li>
+        <li><b>Multiply both sides by 27.</b> ${M('x = 27 · sin(33°) ≈ 14.7')}</li>
+      </ol>
+      <p class="tip">Check that your calculator is in degree mode. In radian mode, 27 · sin(33) gives about 27.0, the same as the hypotenuse. The opposite side has to be shorter than the hypotenuse, so that can’t be right.</p>`,
+    make(r){return [mkSide(r,'top'),mkSide(r,'top'),mkSide(r,'top')].map(p=>sideProblem(p,true))}
+  },
+  {
+    name:'Unknown on the bottom',
+    lesson:`<h2>When the unknown is on the bottom, divide</h2>
+      ${FIG(triSVG({ang:62,flip:true,lab:{vert:'4',hyp:'m'},cls:{vert:'given',hyp:'want'},marks:[{at:'Q',lab:'28°'}]}))}
+      <ol class="worked">
+        <li><b>Name the sides.</b> From 28°, 4 is adjacent and m is the hypotenuse.</li>
+        <li><b>Pick the ratio.</b> Adjacent and hypotenuse → CAH → cosine.</li>
+        <li><b>Set it up.</b> ${M('cos(28°) = 4 / m')}</li>
+        <li><b>m and cos(28°) trade places.</b> ${M('m = 4 ÷ cos(28°) ≈ 4.5')}</li>
+      </ol>
+      <p class="tip">Why trade places? Multiply both sides by m to get m · cos(28°) = 4, then divide both sides by cos(28°).</p>`,
+    make(r){return [mkSide(r,'bottom'),mkSide(r,'bottom'),mkSide(r,'bottom')].map(p=>sideProblem(p,true))}
+  }]
+};
+
+let S=[], QIDX=[], st=null;
+function build(){
+  const r=R(st.seed);
+  S=[{kind:'intro'}];
+  APP.parts.forEach((p,pi)=>{
+    S.push({kind:'lesson',part:pi+1});
+    p.make(r).forEach((q,qi)=>S.push({kind:'q',part:pi+1,id:`${pi+1}.${qi+1}`,...q}));
+  });
+  S.push({kind:'results'});
+  QIDX=S.map((s,i)=>i).filter(i=>S[i].kind==='q');
+}
+function fresh(){return {seed:Math.floor(Math.random()*1e9),i:0,max:0,name:'',start:null,end:null,rec:{}}}
+try{st=JSON.parse(localStorage.getItem(APP.key)||'null')}catch(e){}
+if(!st||!st.rec) st=fresh();
+build();
+function save(){try{localStorage.setItem(APP.key,JSON.stringify(st))}catch(e){}}
+function rec(i){return st.rec[i]||(st.rec[i]={step:0,wrong:0,sw:0,revealed:false,done:false,vals:{},fb:'',fbk:'',bad:[]})}
+const PARTS=['',...APP.parts.map(p=>p.name)];
+const RESULTS=()=>S.length-1;
+
+/* ---------- progress strip ---------- */
+function partCounts(p){const qs=QIDX.filter(i=>S[i].part===p);return [qs.filter(i=>st.rec[i]&&st.rec[i].done).length,qs.length]}
+function renderProgress(){
+  const cur=S[st.i]; let h='';
+  for(let p=1;p<PARTS.length;p++){
+    const [d,t]=partCounts(p), first=S.findIndex(s=>s.part===p);
+    h+=`<li><button type="button" data-go="${first}" class="${cur.part===p?'cur':''}" ${first>st.max?'disabled':''}><span class="bar"><i style="width:${d/t*100}%"></i></span><span class="lab">${p} · ${esc(PARTS[p])}</span></button></li>`;
+  }
+  const all=QIDX.every(i=>st.rec[i]&&st.rec[i].done);
+  h+=`<li><button type="button" data-go="${RESULTS()}" class="${cur.kind==='results'?'cur':''}" ${RESULTS()>st.max?'disabled':''}><span class="bar"><i style="width:${all?100:0}%"></i></span><span class="lab">Results</span></button></li>`;
+  $('progress').innerHTML=h; $('progress').style.gridTemplateColumns=`repeat(${PARTS.length},minmax(0,1fr))`;
+}
+
+/* ---------- steps ---------- */
+function tplHTML(tpl,idx,vals,dis,subs,tight){
+  let k=0;
+  return tpl.split('\n').map(line=>`<div class="tpl${tight?' tight':''}${tight==='mid'?' mid':''}">`+line.split('[]').map((seg,j,arr)=>{
+    const piece=seg?seg.split('|').map(x=>x?`<span>${x}</span>`:'').join('<span class="brk"></span>'):'';
+    if(j===arr.length-1) return piece;
+    const v=vals&&vals[k]!=null?vals[k]:''; const id=`b-${st.i}-${idx}-${k}`; k++;
+    return piece+`<input class="in${String(v).length>4?' wide':''}${subs&&subs.includes(k-1)?' sub':''}" id="${id}" data-k="${k-1}" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Blank ${k}" value="${esc(v)}" ${dis?'disabled':''}>`;
+  }).join('')+`</div>`).join('');
+}
+const PCOL=['#c0392b','#d97706','#2563eb','#7c3aed','#0f766e'];
+const PW=360,PH=320,PP=30;
+function pmap(v){const sx=(PW-2*PP)/(v.xmax-v.xmin), sy=(PH-2*PP)/(v.ymax-v.ymin);
+  return {X:x=>PP+(x-v.xmin)*sx, Y:y=>PH-PP-(y-v.ymin)*sy, ix:px=>v.xmin+(px-PP)/sx, iy:py=>v.ymin+(PH-PP-py)/sy}}
+function plotSVG(s,vals,done){
+  const v=s.view, m=pmap(v); let g='';
+  for(let x=Math.ceil(v.xmin);x<=v.xmax;x++) g+=`<line class="gl" x1="${m.X(x)}" y1="${PP}" x2="${m.X(x)}" y2="${PH-PP}"/>`;
+  for(let y=Math.ceil(v.ymin/v.ystep)*v.ystep;y<=v.ymax;y+=v.ystep) g+=`<line class="gl" x1="${PP}" y1="${m.Y(y)}" x2="${PW-PP}" y2="${m.Y(y)}"/>`;
+  g+=`<line class="ax" x1="${PP}" y1="${m.Y(0)}" x2="${PW-PP}" y2="${m.Y(0)}"/><line class="ax" x1="${m.X(0)}" y1="${PP}" x2="${m.X(0)}" y2="${PH-PP}"/>`;
+  const xs=v.xlab||2;
+  for(let x=Math.ceil(v.xmin/xs)*xs;x<=v.xmax;x+=xs) if(x!==0) g+=`<text x="${m.X(x)}" y="${m.Y(0)+14}" text-anchor="middle">${N(x)}</text>`;
+  const ys=v.ylab||v.ystep*2;
+  for(let y=Math.ceil(v.ymin/ys)*ys;y<=v.ymax;y+=ys) if(y!==0) g+=`<text x="${m.X(0)-5}" y="${m.Y(y)+4}" text-anchor="end">${N(y)}</text>`;
+  const fs=s.fs||(s.f?[{f:s.f}]:[]);
+  if(done&&fs.length){
+    g+=`<clipPath id="pc"><rect x="${PP}" y="${PP}" width="${PW-2*PP}" height="${PH-2*PP}"/></clipPath>`;
+    const span=v.ymax-v.ymin;
+    for(const c of fs){let d='',prev=null,pen=false;
+      for(let k=0;k<=300;k++){const x=v.xmin+(v.xmax-v.xmin)*k/300, y=c.f(x);
+        const ok=isFinite(y)&&y>=v.ymin-span&&y<=v.ymax+span;
+        if(!ok){pen=false;prev=null;continue}
+        const jump=prev!=null&&Math.abs(y-prev)>span;
+        d+=(pen&&!jump?'L':'M')+m.X(x).toFixed(1)+' '+m.Y(y).toFixed(1); pen=true; prev=y}
+      g+=`<path class="curve" clip-path="url(#pc)" d="${d.trim()}" style="${c.color?'stroke:'+c.color+';':''}${c.dash?'stroke-dasharray:6 5;':''}"/>`}
+  }
+  (vals||[]).forEach((pv,k)=>{const x=parseNum(pv[0]),y=parseNum(pv[1]); if(isNaN(x)||isNaN(y)) return;
+    if(x<v.xmin||x>v.xmax||y<v.ymin||y>v.ymax) return;
+    g+=`<circle cx="${m.X(x)}" cy="${m.Y(y)}" r="6.5" fill="${pv[2]||PCOL[k%PCOL.length]}" stroke="#fff" stroke-width="2"/>`});
+  return `<svg viewBox="0 0 ${PW} ${PH}" role="img" aria-label="Coordinate grid">${g}</svg>`;
+}
+function plotHTML(s,idx,vals,dis,bad,sel){
+  const rows=s.rows.map((rw,k)=>{const pv=(vals&&vals[k])||['',''];
+    return `<div class="prow${!dis&&sel===k?' sel':''}${!dis&&bad&&bad.includes(k)?' no':''}" data-row="${k}"><span class="pl"><i class="dot" style="background:${PCOL[k%PCOL.length]}"></i>${rw.label}</span>(<input class="in" data-row="${k}" data-xy="0" autocomplete="off" aria-label="${rw.label} x" value="${esc(pv[0])}" ${dis?'disabled':''}>,<input class="in" data-row="${k}" data-xy="1" autocomplete="off" aria-label="${rw.label} y" value="${esc(pv[1])}" ${dis?'disabled':''}>)</div>`}).join('');
+  return `<div class="plotwrap"><div>${rows}</div><div class="plot" id="plot-${st.i}-${idx}">${plotSVG(s,vals,dis)}</div></div>`;
+}
+function readPlot(){const rows=[];document.querySelectorAll('.step.active [data-xy]').forEach(x=>{const k=+x.dataset.row;rows[k]=rows[k]||['',''];rows[k][+x.dataset.xy]=x.value});return rows}
+const BOXPOS=['top0','top1','side0','side1','c00','c01','c10','c11'];
+function boxHTML(s,idx,vals,dis,bad){
+  const v=vals||{};
+  const slot=(pos,cls)=>{
+    if(s.given[pos]!=null) return `<div class="${cls} given${s.mid&&s.mid.includes(pos)?' mid':''}">${s.given[pos]}</div>`;
+    const val=v[pos]!=null?v[pos]:''; const no=!dis&&bad&&bad.includes(pos)?' no':'';
+    return `<div class="${cls}${no}${dis&&s.mid&&s.mid.includes(pos)?' mid':''}"><input class="in${no}" data-pos="${pos}" autocomplete="off" spellcheck="false" aria-label="${pos.startsWith('c')?'Inside box':'Outside label'}" value="${esc(val)}" ${dis?'disabled':''}></div>`;
+  };
+  return `<div class="boxwrap"><div class="box">
+    <div></div>${slot('top0','lab')}${slot('top1','lab')}
+    ${slot('side0','lab')}${slot('c00','cell')}${slot('c01','cell')}
+    ${slot('side1','lab')}${slot('c10','cell')}${slot('c11','cell')}
+  </div></div>`+(dis?'':`<div class="keys" aria-label="Insert a symbol"><button type="button" data-act="ins" data-t="x²">x²</button><button type="button" data-act="ins" data-t="x">x</button><button type="button" data-act="ins" data-t="−">−</button></div>`);
+}
+const OPEN={};
+function stepOpen(r,q,idx){const k=st.i+':'+idx; if(k in OPEN) return OPEN[k]; return !r.done&&r.step===idx+1&&!!(q.steps[idx+1]&&q.steps[idx+1].showPrev)}
+function plainText(h){const d=document.createElement('div');d.innerHTML=h;return d.textContent.replace(/\s+/g,' ').trim()}
+/* shuffle choice order, the same way every time for this student, problem and step */
+function choiceOrder(s,idx){const n=s.options.length, o=[...Array(n).keys()]; if(s.noShuffle) return o;
+  const f=rng((st.seed^(st.i*7919+idx*104729))>>>0); for(let k=n-1;k>0;k--){const j=Math.floor(f()*(k+1));[o[k],o[j]]=[o[j],o[k]]} return o}
+function stepHTML(q,r,idx){
+  const s=q.steps[idx], state=idx<r.step||r.done?'done':idx===r.step?'active':'later';
+  if(state==='later') return '';
+  if(state==='done'&&q.steps.length>1&&!stepOpen(r,q,idx))
+    return `<div class="step done coll"><button type="button" class="stog" data-act="tog" data-k="${idx}" data-open="0" aria-expanded="false" aria-label="Show step ${idx+1}"><span class="n">✓</span><span class="st">${esc(s.sum||plainText(s.text).split(/(?<=[.?!])\s/)[0])}</span><span class="arr" aria-hidden="true">▸</span></button>${r.fb&&r.fbAt===idx?`<p class="fb ${r.fbk} cfb" role="status">${r.fb}</p>`:''}</div>`;
+  const dis=state==='done', saved=r.vals[idx];
+  let ctl='';
+  if(s.type==='plot'){
+    ctl=plotHTML(s,idx,dis?saved:(Array.isArray(r.draft)&&Array.isArray(r.draft[0])?r.draft:null),dis,r.bad,r.sel??0)+(dis?'':`<p class="muted" style="font-size:.85rem;margin:0">Type each point, or tap the graph to fill in the highlighted point.</p><div class="row"><button class="btn small" type="button" data-act="check">Check my points</button></div>`);
+  } else if(s.type==='box'){
+    ctl=boxHTML(s,idx,dis?saved:(r.draft&&!Array.isArray(r.draft)?r.draft:null),dis,r.bad)+(dis?'':`<div class="row"><button class="btn small" type="button" data-act="check">Check the box</button></div>`);
+  } else if(s.type==='choice'){
+    const ord=choiceOrder(s,idx);
+    ctl=`<div class="choices${s.cols===2?' two':''}">${ord.map(oi=>[s.options[oi],oi]).map(([o,oi])=>`<button type="button" class="ch${dis&&oi===s.correct?' on':''}${!dis&&(r.bad||[]).includes(oi)?' no':''}" data-act="choice" data-o="${oi}" ${dis?'disabled':''}>${o.t}</button>`).join('')}</div>`;
+  } else if(s.type==='explain'){
+    ctl=`<textarea class="explain" id="ex-${st.i}-${idx}" placeholder="Type your explanation in full sentences." ${dis?'disabled':''}>${esc(saved||'')}</textarea>`
+      +(dis?`<div class="sample"><b>Compare with a sample answer</b>${s.sample}</div>`:`<div class="row"><button class="btn small" type="button" data-act="check">Submit explanation</button></div>`);
+  } else {
+    ctl=tplHTML(s.tpl,idx,saved||r.draft,dis,s.subs,s.tight)+(dis?'':`<div class="row"><button class="btn small" type="button" data-act="check">Check</button></div>`);
+  }
+  const num=q.steps.length>1?(dis?'✓':idx+1):(dis?'✓':'?');
+  const fb=r.fb&&r.fbAt===idx?`<p class="fb ${r.fbk}" role="status">${r.fb}</p>`:'';
+  const hide=state==='done'&&q.steps.length>1?`<button type="button" class="shide" data-act="tog" data-k="${idx}" data-open="1" aria-expanded="true" aria-label="Hide step ${idx+1}">▾</button>`:'';
+  return `<div class="step ${state}"><span class="n">${num}</span><div class="step-body">${hide}<span class="step-text">${s.text}${s.small?`<small>${s.small}</small>`:''}</span>${s.fig?`<div class="plot" style="max-width:420px">${typeof s.fig==='function'?s.fig():s.fig}</div>`:''}${ctl}${fb}</div></div>`;
+}
+function qHTML(q,i){
+  const r=rec(i), list=QIDX.filter(j=>S[j].part===q.part), n=list.indexOf(i)+1;
+  let h=`<p class="eyebrow">Part ${q.part} · ${esc(PARTS[q.part])} · Problem ${n} of ${list.length}</p><div class="qp">${q.prompt}</div>`;
+  if(q.figure&&!q.figBottom) h+=q.figure(r);
+  h+=`<div class="steps">${q.steps.map((s,k)=>stepHTML(q,r,k)).join('')}</div>`;
+  if(r.done&&q.final) h+=`<div class="final">${q.final}</div>`;
+  if(q.figure&&q.figBottom) h+=q.figure(r);
+  if(!r.done&&r.sw>=3&&q.steps[r.step].type!=='explain') h+=`<div><button class="btn ghost small" type="button" data-act="reveal">Show me this step</button></div>`;
+  const partLast=list[list.length-1]===i, [pd,pt]=partCounts(q.part), finished=r.done&&partLast&&pd===pt;
+  const lastPart=q.part===PARTS.length-1;
+  if(finished) h+=`<div class="partdone" role="status"><strong>Part ${q.part} complete!</strong><span>${lastPart?'You finished every part. Tap the button below to see your results.':`Next up: Part ${q.part+1}, ${esc(PARTS[q.part+1])}.`}</span></div>`;
+  h+=nav(r.done,!partLast?'Next problem':lastPart?'See my results':`Go to Part ${q.part+1}`,finished);
+  return h;
+}
+function nav(ok,label,pulse){
+  return `<div class="nav">${st.i>0?`<button class="btn ghost" type="button" data-act="back">Back</button>`:'<span></span>'}<button class="btn${pulse?' pulse':''}" type="button" data-act="next" ${ok?'':'disabled'}>${label||'Next'}</button></div>`;
+}
+function setFb(r,t,k){r.fb=t;r.fbk=k;r.fbAt=r.done?(r.fbAt??0):r.step}
+function advance(q,r){r.step++; r.sw=0; r.draft=null; r.bad=[]; if(r.step>=q.steps.length){r.done=true; return true} return false}
+function readBox(){const o={};document.querySelectorAll('.step.active [data-pos]').forEach(x=>o[x.dataset.pos]=x.value);return o}
+function readBlanks(idx){return [...document.querySelectorAll(`.step.active .in`)].map(x=>x.value)}
+function submit(){
+  const i=st.i, q=S[i], r=rec(i), idx=r.step, s=q.steps[idx];
+  if(s.type==='explain'){
+    const t=($(`ex-${i}-${idx}`)||{}).value||'';
+    const words=t.trim().split(/\s+/).filter(Boolean).length;
+    if(words<(s.minWords||8)){setFb(r,`Write at least ${s.minWords||8} words. Explain it like you’re teaching a friend.`,'bad'); return render()}
+    r.vals[idx]=t.trim(); r.explain=r.explain||{}; r.explain[idx]=t.trim();
+    setFb(r,'Explanation saved. Compare it with the sample below.','good'); return finishStep(q,r);
+  }
+  if(s.type==='plot'){
+    const v=readPlot(); r.draft=v;
+    if(v.some(p=>!p||p[0].trim()===''||p[1].trim()==='')){setFb(r,'Fill in both numbers for every point.','bad'); return render()}
+    const P=v.map(p=>[parseNum(p[0]),parseNum(p[1])]);
+    const nb=P.findIndex(p=>isNaN(p[0])||isNaN(p[1])); if(nb>=0){r.bad=[nb]; setFb(r,'Type numbers only, like 3 or −25.','bad'); return render()}
+    const bad=[]; const msgs=[];
+    const groups={}; s.rows.forEach((rw,k)=>{if(rw.group){(groups[rw.group]=groups[rw.group]||[]).push(k)}});
+    const used=new Set();
+    s.rows.forEach((rw,k)=>{
+      if(rw.group){ const pool=groups[rw.group].map(j=>s.rows[j].want).filter((w,j)=>!used.has(rw.group+j));
+        const j=groups[rw.group].findIndex((jj,n)=>!used.has(rw.group+n)&&near(P[k][0],s.rows[jj].want[0])&&near(P[k][1],s.rows[jj].want[1]));
+        if(j>=0){used.add(rw.group+j);return} }
+      else if(near(P[k][0],rw.want[0])&&near(P[k][1],rw.want[1])) return;
+      bad.push(k); const h=rw.hint&&rw.hint(P[k]); if(h&&!msgs.includes(h)) msgs.push(h);
+    });
+    if(!bad.length){r.vals[idx]=v; r.bad=[]; setFb(r,s.ok||'All of your points are right.','good'); return finishStep(q,r)}
+    r.bad=bad; r.wrong++; r.sw++; r.sel=bad[0];
+    setFb(r,msgs.join(' ')||'Check the red points.','bad'); save(); return render();
+  }
+  if(s.type==='box'){
+    const v=readBox(); r.draft=v;
+    if(Object.values(v).some(x=>x.trim()==='')){setFb(r,'Fill in every empty box first.','bad'); return render()}
+    const t={}; for(const k in v){t[k]=parseTerm(v[k]); if(!t[k]){setFb(r,`“${esc(v[k])}” isn’t a term I can read. Type things like x, −3, x², −6x or 9.`,'bad'); r.bad=[k]; return render()}}
+    const bad=[];
+    const groups=(s.groups||[]).map(g=>g.filter(k=>k in s.want));
+    const inGroup=new Set(groups.flat());
+    for(const k in s.want){ if(!inGroup.has(k)&&!tEq(t[k],s.want[k])) bad.push(k) }
+    for(const g of groups){
+      const pool=g.map(k=>s.want[k]); const miss=[];
+      for(const k of g){const j=pool.findIndex(w=>tEq(t[k],w)); if(j>=0) pool.splice(j,1); else miss.push(k)}
+      bad.push(...miss);
+    }
+    let msg='';
+    if(!bad.length&&s.consistent){
+      const get=k=>k in t?t[k]:parseTerm(String(s.given[k]).replace(/^\+/,''));
+      const mul=(a,b)=>a&&b?{c:a.c*b.c,d:a.d+b.d}:null;
+      for(const [cell,top,side] of [['c00','top0','side0'],['c01','top1','side0'],['c10','top0','side1'],['c11','top1','side1']]){
+        if(!tEq(get(cell),mul(get(top),get(side)))){bad.push(...[top,side,cell].filter(k=>k in t)); msg='Each inside box must equal its top label times its side label. Check the red ones.'}
+      }
+    }
+    if(!bad.length){ r.vals[idx]=Object.fromEntries(Object.entries(t).map(([k,x])=>[k,fmtTerm(x.c,x.d)])); r.bad=[]; setFb(r,s.ok||'Every box checks out.','good'); return finishStep(q,r) }
+    r.bad=[...new Set(bad.length?bad:Object.keys(s.want))]; r.wrong++; r.sw++;
+    setFb(r,msg||(s.hint&&s.hint(t,r.bad))||'Check the red boxes. Each inside box is its top label times its side label.','bad'); save(); return render();
+  }
+  const vals=readBlanks(idx);
+  r.draft=vals;
+  if(vals.some(v=>v.trim()==='')){setFb(r,'Fill in every box first.','bad'); return render()}
+  const nums=vals.map(parseNum);
+  if(s.text_ok===undefined&&nums.some(isNaN)&&!s.raw){setFb(r,'Type numbers only, like 6, −4, 2.5 or 11/2.','bad'); return render()}
+  const res=s.check?s.check(s.raw?vals:nums):defaultCheck(s,nums);
+  if(res===true||(res&&res.ok)){
+    r.vals[idx]=vals; setFb(r,s.quiet?'':((res&&res.msg)||s.ok||'Correct.'),'good'); return finishStep(q,r);
+  }
+  r.wrong++; r.sw++;
+  setFb(r,(res&&res.hint)||(typeof res==='string'?res:'')||(s.hints?s.hints[Math.min(r.sw-1,s.hints.length-1)]:'Not quite. Try again.'),'bad');
+  save(); render();
+}
+function defaultCheck(s,nums){
+  if(s.ans.every((a,k)=>near(nums[k],a,s.tol||1e-6))) return true;
+  if(s.hint){const h=s.hint(nums); if(h) return {hint:h}}
+  return false;
+}
+function finishStep(q,r){
+  const doneNow=advance(q,r); save(); render();
+  if(doneNow){const [d,t]=partCounts(q.part); if(d===t) celebrate()}
+}
+function choose(oi){
+  const i=st.i, q=S[i], r=rec(i), s=q.steps[r.step], o=s.options[oi];
+  if(oi===s.correct){r.vals[r.step]=oi; setFb(r,o.why||s.ok||'Correct.','good'); return finishStep(q,r)}
+  if(!r.bad.includes(oi)){r.bad.push(oi); r.wrong++; r.sw++}
+  setFb(r,o.why||'Not quite. Try another.','bad'); save(); render();
+}
+function reveal(){
+  const i=st.i, q=S[i], r=rec(i), s=q.steps[r.step];
+  r.revealed=true;
+  if(s.type==='choice'){r.vals[r.step]=s.correct; setFb(r,'The answer is: '+s.options[s.correct].t+'. '+(s.options[s.correct].why||''),'show')}
+  else if(s.type==='plot'){r.vals[r.step]=s.rows.map(rw=>rw.want.map(N)); r.bad=[]; setFb(r,s.show||'Here are the points.','show')}
+  else if(s.type==='box'){const o={};for(const k in s.want) o[k]=fmtTerm(s.want[k].c,s.want[k].d); r.vals[r.step]=o; r.bad=[]; setFb(r,s.show||'Here’s the filled-in box.','show')}
+  else{const at=s.ansText||s.ans.map(N); r.vals[r.step]=at; setFb(r,(s.show||('Here it is: '+at.join(', ')+'.')),'show')}
+  finishStep(q,r);
+}
+
+/* ---------- screens ---------- */
+function introHTML(){
+  const started=Object.keys(st.rec).length>0;
+  return `<p class="eyebrow">${esc(APP.unit)}</p>
+  <h2>${APP.heading}</h2>
+  <p>${APP.intro}</p>
+  <ol class="plan">${APP.parts.map((p,pi)=>`<li><span class="k">Part ${pi+1}</span><b>${esc(p.name)}</b><span class="muted">${partCounts(pi+1)[1]} problems</span></li>`).join('')}</ol>
+  <div class="fields"><label for="nm">Your name<input id="nm" autocomplete="name" value="${esc(st.name)}"></label></div>
+  <p class="fb bad" id="introErr" role="status"></p>
+  <div class="row"><button class="btn" type="button" data-act="begin">${started?'Continue where I left off':'Start'}</button>
+  ${started?`<button class="btn ghost" type="button" data-act="reset">Start over with new problems</button>`:''}</div>`;
+}
+function lessonHTML(s){
+  const p=APP.parts[s.part-1];
+  return `<p class="eyebrow">Part ${s.part} · ${esc(p.name)}</p>${p.lesson}`+nav(true,'Start the problems');
+}
+function status(r){if(!r||!r.done) return ['','not finished']; if(r.revealed) return ['shown','answer shown']; return r.wrong===0?['first','first try']:['hint',`correct after ${r.wrong} miss${r.wrong>1?'es':''}`]}
+function minutes(){const end=st.end||Date.now();return st.start?Math.max(1,Math.round((end-st.start)/60000)):0}
+function resultsHTML(){
+  const all=QIDX.every(i=>st.rec[i]&&st.rec[i].done);
+  if(all&&!st.end){st.end=Date.now(); save()}
+  let first=0,hint=0,shown=0,left=0;
+  QIDX.forEach(i=>{const [c]=status(st.rec[i]); if(c==='first')first++; else if(c==='hint')hint++; else if(c==='shown')shown++; else left++});
+  const firstLeft=QIDX.find(i=>!(st.rec[i]&&st.rec[i].done));
+  const when=new Date(st.end||Date.now()).toLocaleString([], {weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+  const parts=APP.parts.map((p,pi)=>`<section class="rpart"><h3>Part ${pi+1} · ${esc(p.name)}</h3><ul>${QIDX.filter(i=>S[i].part===pi+1).map((i,n)=>{
+    const r=st.rec[i], [c,t]=status(r), q=S[i];
+    const ex=r&&r.explain?Object.values(r.explain).map(x=>`<blockquote>${esc(x)}</blockquote>`).join(''):'';
+    return `<li><span>${n+1}. ${q.label}</span><span class="pill ${c}">${t}</span></li>${ex}`}).join('')}</ul></section>`).join('');
+  return `<p class="eyebrow">Results · ${esc(APP.unit)}</p>
+  <p class="rtitle">${esc(APP.title)}</p>
+  <h2 class="rname">${esc(st.name||'(no name)')}</h2>
+  <p class="muted">${all?'Finished':'In progress'} ${when} · about ${minutes()} min</p>
+  ${left?`<div class="tip">You still have ${left} problem${left>1?'s':''} left. <button class="btn small" type="button" data-go="${firstLeft}">Go to the next one</button></div>`:''}
+  <div class="stats">
+   <div class="stat"><span class="v">${first}/${QIDX.length}</span><span class="l">Correct on the first try</span></div>
+   <div class="stat"><span class="v">${hint}</span><span class="l">Correct after a hint</span></div>
+   <div class="stat"><span class="v">${shown}</span><span class="l">Answers shown</span></div>
+  </div>
+  <div class="rparts">${parts}</div>
+  <div class="nav"><button class="btn ghost" type="button" data-act="back">Back</button><button class="btn ghost" type="button" data-act="again">Practice again with new numbers</button></div>`;
+}
+function render(){
+  $('appTitle').textContent=APP.title; $('appSub').textContent=APP.unit;
+  renderProgress();
+  const s=S[st.i], card=$('card');
+  if(s.kind==='intro') card.innerHTML=introHTML();
+  else if(s.kind==='lesson'){card.innerHTML=lessonHTML(s); const lp=APP.parts[s.part-1]; if(lp.init) lp.init(card)}
+  else if(s.kind==='results') card.innerHTML=resultsHTML();
+  else card.innerHTML=qHTML(s,st.i);
+  const f=card.querySelector('.step.active [data-pos]:placeholder-shown, .step.active .in, .step.active textarea, .step.active .ch');
+  if(f&&s.kind==='q') setTimeout(()=>{try{f.focus({preventScroll:true})}catch(e){}},0);
+}
+function go(i){st.i=Math.max(0,Math.min(S.length-1,i)); st.max=Math.max(st.max,st.i); save(); render(); window.scrollTo({top:0})}
+let armed=false;
+$('card').addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]'); if(g){go(+g.dataset.go);return}
+  const b=e.target.closest('[data-act]'); if(!b) return;
+  const a=b.dataset.act;
+  if(a==='next') go(st.i+1);
+  else if(a==='back') go(st.i-1);
+  else if(a==='check') submit();
+  else if(a==='choice') choose(+b.dataset.o);
+  else if(a==='reveal') reveal();
+  else if(a==='tog'){OPEN[st.i+':'+b.dataset.k]=b.dataset.open!=='1'; render()}
+  else if(a==='ins'){const inp=lastBox&&document.body.contains(lastBox)?lastBox:document.querySelector('.step.active [data-pos]'); if(inp){inp.value+=b.dataset.t; inp.focus(); rec(st.i).draft=readBox(); save()}}
+  else if(a==='begin'){const v=$('nm').value.trim(); if(!v){$('introErr').textContent='Type your name so your teacher knows whose results these are.';return}
+    st.name=v; if(!st.start) st.start=Date.now(); go(Object.keys(st.rec).length?Math.max(1,st.max):1)}
+  else if(a==='reset'||a==='again'){
+    if(!armed){armed=true;b.textContent='Tap again to erase your progress';return}
+    const nm=st.name; st=fresh(); st.name=nm; armed=false; build(); save(); render();
+  }
+});
+$('card').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&e.target.matches('.step.active .in')){e.preventDefault();submit()}
+  if(e.key==='Enter'&&e.target.id==='nm'){e.preventDefault();$('card').querySelector('[data-act="begin"]').click()}
+});
+let lastBox=null;
+function refreshPlot(){const q=S[st.i], r=rec(st.i), s=q.steps&&q.steps[r.step]; if(!s||s.type!=='plot') return;
+  const el=document.querySelector('.step.active .plot'); if(el) el.innerHTML=plotSVG(s,readPlot(),false)}
+function selRow(k){const r=rec(st.i); r.sel=k; document.querySelectorAll('.step.active .prow').forEach(x=>x.classList.toggle('sel',+x.dataset.row===k))}
+$('card').addEventListener('focusin',e=>{if(e.target.matches('.step.active [data-xy]')) selRow(+e.target.dataset.row)});
+$('card').addEventListener('pointerdown',e=>{
+  const svg=e.target.closest&&e.target.closest('.step.active .plot svg'); if(!svg) return;
+  const q=S[st.i], r=rec(st.i), s=q.steps[r.step]; const ctm=svg.getScreenCTM(); if(!ctm) return;
+  const pt=svg.createSVGPoint(); pt.x=e.clientX; pt.y=e.clientY; const p=pt.matrixTransform(ctm.inverse()), m=pmap(s.view);
+  const x=Math.round(m.ix(p.x)), y=Math.round(m.iy(p.y)/ (s.view.snap||1))*(s.view.snap||1);
+  const k=r.sel??0, ins=document.querySelectorAll(`.step.active [data-row="${k}"][data-xy]`);
+  if(ins.length===2){ins[0].value=N(x); ins[1].value=N(y); r.draft=readPlot(); save(); refreshPlot();
+    const nx=s.rows.findIndex((rw,j)=>j>k&&[...document.querySelectorAll(`.step.active [data-row="${j}"][data-xy]`)].some(i=>i.value.trim()===''));
+    if(nx>=0) selRow(nx)}
+});
+$('card').addEventListener('focusin',e=>{if(e.target.matches('[data-pos]')) lastBox=e.target});
+$('card').addEventListener('input',e=>{
+  if(e.target.id==='nm'){st.name=e.target.value;save()}
+  if(e.target.matches('.step.active [data-xy]')){const r=rec(st.i); r.draft=readPlot(); save(); refreshPlot()}
+  else if(e.target.matches('.step.active [data-pos]')){rec(st.i).draft=readBox();save()}
+  else if(e.target.matches('.step.active .in')){rec(st.i).draft=readBlanks();save()}
+  if(e.target.matches('.step.active textarea')){const r=rec(st.i); r.vals[r.step]=e.target.value; save()}
+});
+$('progress').addEventListener('click',e=>{const b=e.target.closest('[data-go]'); if(b&&!b.disabled) go(+b.dataset.go)});
+let tt; function toast(m){const t=$('toast'); t.textContent=m; t.hidden=false; clearTimeout(tt); tt=setTimeout(()=>t.hidden=true,2400)}
+function celebrate(){
+  try{if(matchMedia('(prefers-reduced-motion: reduce)').matches) return}catch(e){}
+  const cv=document.createElement('canvas'); cv.className='fx'; cv.setAttribute('aria-hidden','true'); document.body.appendChild(cv);
+  const dpr=Math.min(2,devicePixelRatio||1),W=innerWidth,H=innerHeight; cv.width=W*dpr; cv.height=H*dpr;
+  const c=cv.getContext('2d'); c.scale(dpr,dpr);
+  const cs=getComputedStyle(document.documentElement), cols=['--accent','--brass','--good','--bad'].map(v=>cs.getPropertyValue(v).trim()||'#a87a1f');
+  const ps=[]; for(let b=0;b<6;b++){const x=W*(.15+Math.random()*.7),y=H*(.15+Math.random()*.35),col=cols[b%4],t0=b*220;
+    for(let k=0;k<40;k++){const a=Math.PI*2*k/40,sp=2+Math.random()*3;ps.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,t0,life:900+Math.random()*400,col})}}
+  const start=performance.now();
+  (function f(now){const t=now-start; c.clearRect(0,0,W,H); let alive=false;
+    for(const p of ps){const age=t-p.t0; if(age<0){alive=true;continue} if(age>p.life) continue; alive=true;
+      const s=age/16.7,k=(1-Math.pow(.95,s))/.05; c.globalAlpha=1-age/p.life; c.fillStyle=p.col; c.beginPath(); c.arc(p.x+p.vx*k,p.y+p.vy*k+.01*s*s,2.6,0,7); c.fill()}
+    if(alive) requestAnimationFrame(f); else cv.remove()})(start);
+}
+if(!st.name) st.i=0;
+render();
+</script>
